@@ -1,16 +1,13 @@
-A Gameboy emulator that can currently pass all Blargg tests (except 2, as I am currently implementing interrupts, timers, and the PPU).
-No AI was used throughout the entire creation of this project.
+To build:
+1. Install SDL3 and CMake onto your system
+2. Download the emulator and unzip. Navigate to the folder using ``cd``
+3. To build: ``mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -march=native -flto" .. ; make ; cd -``
 
-(Rough README, ignore how unprofessional it is at the moment)
+To run:
+1. Navigate to the root directory and run: ``./build/kctboy``
+2. You will be prompted with a dialogue in the command line to start a selected ROM. You must provide the name of the ROM-file without the `.gb` extension
+3. You can create or select a save to load up and save to if loading a ROM for a game that originally had a battery-backed cartridge
 
-To use:
-1. Download the code
-2. Install SDL2 onto your system (if not yet installed)
-3. In the command line, cd to the gameboy-emulator folder
-4. Run: g++ *.cpp -lSDL2
-5. Then go online and download the ROM you want to play. Create a folder entitled 'rom' within the gameboy-emulator folder.
-6. Then run: ./a.out (name of rom here) 1 -> the 1 is needed as I haven't yet altered how the program reads command line arguments (this will be changed later)
-
-A window should open with a 'shaking' Nintendo logo (this is the unofficial boot-rom, as the official one seen on actual Game Boy games is copyrighted). Afterwards, the game should run.
-
-This is an imperfect emulator, so visual artifacts will occur and some games may not run at all (notable example is Bomb Jack at the time of writing this, and Road Rash which appeared to pause at one of the screens and not enter gameplay).
+To add ROMs to the emulator (this has to be done manually):
+1. ROMs must end with the `.gb` extension to be usable (if this extension is uppercase, please replace with lowercase letters)
+2. Rename the ROM such that there are no spaces in the name (e.g. change `Super Mario Land.gb` to `mario.gb`)
