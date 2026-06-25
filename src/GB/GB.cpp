@@ -5,6 +5,7 @@
 #define AUDIO_SAMPLES_PER_FRAME 800
 #define MAXIMUM_ITERATIONS 200000
 #define LIMIT_EXECUTION 0
+#define DEADZONE 8000
 
 GB::GB() {
 	// Clear log file
@@ -121,6 +122,28 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 	std::cin >> px_size;
 	
 	SDL_Init(SDL_INIT_VIDEO);
+	SDL_SetHint(SDL_HINT_GAMECONTROLLER_SENSOR_FUSION, "1");
+	SDL_Init(SDL_INIT_GAMEPAD);
+
+	int count;
+	bool gamepad_enabled;
+	bool gamepad_connected;
+	SDL_JoystickID *gamepads = SDL_GetGamepads(&count);
+	SDL_JoystickID gamepad_id;
+	SDL_Gamepad* gamepad = nullptr;
+	if (count > 0) {
+		// Will add ability to detect multiple controllers and select a controller
+		gamepad_id = gamepads[0];
+		gamepad_enabled = true;
+		gamepad_connected = true;
+		gamepad = SDL_OpenGamepad(gamepad_id);
+		std::cout << "Detected controller: " << SDL_GetGamepadName(gamepad) << "\n";
+		std::cout << "Would you like to use this controller? (0 = no, 1 = yes)\n>> ";
+		std::cin >> gamepad_enabled;
+	} else {
+		gamepad_enabled = false;
+		gamepad_connected = false;
+	}
 
 	SDL_Window* window = SDL_CreateWindow(
 		"Gameboy Emulator",
@@ -146,6 +169,9 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 
 	SDL_SetRenderLogicalPresentation(renderer, GAMEBOY_SCREEN_WIDTH, GAMEBOY_SCREEN_HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 	
+	bool up, down, left, right, a, b, start, select;
+	SDL_GamepadButton button;
+
 	int frame = 0;
 	bool first_frame = true;
 	float frame_rate;
@@ -180,20 +206,41 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 				const bool* state = SDL_GetKeyboardState(&num_keys);
 
 				SDL_Event event;
-				if (SDL_PollEvent(&event)) {
+				if (gamepad_enabled) {
+					up, down, left, right, a, b, start, select = false;
+					Sint16 x = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
+					Sint16 y = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
+
+					up = (y < -DEADZONE);
+					down = (y > DEADZONE);
+					left = (x < -DEADZONE);
+					right = (x > DEADZONE);
+				}
+				while (SDL_PollEvent(&event)) {
 					if (event.type == SDL_EVENT_QUIT) {
 						running = 0;
 					}
 				}
 
-				bool up = state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_W];
-				bool down = state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_S];
-				bool left = state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_A];
-				bool right = state[SDL_SCANCODE_RIGHT] || state[SDL_SCANCODE_D];
-				bool a = state[SDL_SCANCODE_X] || state[SDL_SCANCODE_K];
-				bool b = state[SDL_SCANCODE_Z] || state[SDL_SCANCODE_J];
-				bool start = state[SDL_SCANCODE_RETURN] || state[SDL_SCANCODE_RETURN2] || state[SDL_SCANCODE_SPACE];
-				bool select = state[SDL_SCANCODE_RSHIFT] || state[SDL_SCANCODE_LSHIFT];
+				if (gamepad_enabled) {
+					up = up || SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_UP);
+					down = down || SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+					left = left || SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
+					right = right|| SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+					a = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST);
+					b = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
+					start = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_START) || SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
+					select = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_BACK) || SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
+				} else {
+					up = state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_W];
+					down = state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_S];
+					left = state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_A];
+					right = state[SDL_SCANCODE_RIGHT] || state[SDL_SCANCODE_D];
+					a = state[SDL_SCANCODE_X] || state[SDL_SCANCODE_K];
+					b = state[SDL_SCANCODE_Z] || state[SDL_SCANCODE_J];
+					start = state[SDL_SCANCODE_RETURN] || state[SDL_SCANCODE_RETURN2] || state[SDL_SCANCODE_SPACE];
+					select = state[SDL_SCANCODE_RSHIFT] || state[SDL_SCANCODE_LSHIFT];
+				}
 				cpu.mmu.set_joypad(up, down, left, right, a, b, start, select);
 
 				// Render texture
@@ -215,6 +262,10 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 
 	if (cpu.mmu.battery_enabled) {
 		cpu.mmu.create_save(username);
+	}
+
+	if (gamepad_connected) {
+		SDL_CloseGamepad(gamepad);
 	}
 
 	std::sort(opcode_tests.begin(), opcode_tests.end(), test_comparison);

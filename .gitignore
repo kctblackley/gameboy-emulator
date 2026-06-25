@@ -5,3 +5,5 @@ rom/*
 
 saves/*
 !saves/.keep
+
+build/*
