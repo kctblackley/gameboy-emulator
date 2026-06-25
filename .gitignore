@@ -1,5 +1,7 @@
 README.md
 
+log.log
+
 rom/*
 !rom/.keep
 
