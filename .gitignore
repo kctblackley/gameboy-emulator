@@ -1,0 +1,7 @@
+README.md
+
+rom/*
+!rom/.keep
+
+saves/*
+!saves/.keep
