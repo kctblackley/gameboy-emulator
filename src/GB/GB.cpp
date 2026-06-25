@@ -2,6 +2,7 @@
 
 #define PROGRESS_STEP 10000 // Iterations to carry out until asking to quit
 #define PROGRESS_STEP_ENABLED 0
+#define AUDIO_SAMPLES_PER_FRAME 800
 #define MAXIMUM_ITERATIONS 200000
 #define LIMIT_EXECUTION 0
 
@@ -115,20 +116,22 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 	interrupted = false;
 	exit_halt = false;
 
+	int px_size;
+	std::cout << "Which pixel size would you like? (1 = small)\n>> ";
+	std::cin >> px_size;
+	
 	SDL_Init(SDL_INIT_VIDEO);
+
 	SDL_Window* window = SDL_CreateWindow(
 		"Gameboy Emulator",
-		SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED,
-		GAMEBOY_SCREEN_WIDTH  * PIXEL_SIZE,
-		GAMEBOY_SCREEN_HEIGHT * PIXEL_SIZE,
-		SDL_WINDOW_SHOWN
+		GAMEBOY_SCREEN_WIDTH  * px_size,
+		GAMEBOY_SCREEN_HEIGHT * px_size,
+		0
 	);
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(
 		window,
-		-1,
-		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+		NULL
 	);
 
 	SDL_Texture* texture = SDL_CreateTexture(
@@ -139,7 +142,9 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 		GAMEBOY_SCREEN_HEIGHT
 	);
 
-	SDL_RenderSetLogicalSize(renderer, GAMEBOY_SCREEN_WIDTH, GAMEBOY_SCREEN_HEIGHT);
+	SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+	SDL_SetRenderLogicalPresentation(renderer, GAMEBOY_SCREEN_WIDTH, GAMEBOY_SCREEN_HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 	
 	int frame = 0;
 	bool first_frame = true;
@@ -147,66 +152,65 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 	float frame_rate_time = 1000.0 / 59.7;
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	while (running > 0) {
-		if (!cpu.is_halt) { log_cpu(); }
-		update_if();
-		interrupt_handler();
-		if (!cpu.is_halt) {
-			prev_t = cpu.mmu.t_cycle;
-			fetch();
-			execute();
-			increment_pc();
-			cycle_test();
-		} else {
-			cpu.mmu.m_tick();
-		}
-		if (exit_halt) {
-			cpu.is_halt = false;
-			exit_halt = false;
-		}
-		
-		//serial_output();
-		
-		if (cpu.mmu.update_frame) {
-			std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-			frame_rate = 1000.0f / (std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
-			begin = std::chrono::steady_clock::now();
-
-	       	cpu.mmu.apu.can_queue = (cpu.mmu.apu.get_sample_size() < sizeof(float) * BUFFER_SIZE * AUDIO_SYNC_FRAME_TOLERANCE);
-	        std::cout << frame_rate << "\n";
-	        // Keyboard controls and joypad
-	        SDL_PumpEvents();
-			const Uint8* state = SDL_GetKeyboardState(NULL);
-
-			SDL_Event event;
-			if (SDL_PollEvent(&event)) {
-				if (event.type == SDL_QUIT) {
-					running = 0;
-				}
+		uint32_t samples_left = cpu.mmu.apu.get_sample_size();
+		while (samples_left < sizeof(float) * BUFFER_SIZE * 5) {
+			if (!cpu.is_halt) { log_cpu(); }
+			update_if();
+			interrupt_handler();
+			if (!cpu.is_halt) {
+				prev_t = cpu.mmu.t_cycle;
+				fetch();
+				execute();
+				increment_pc();
+				cycle_test();
+			} else {
+				cpu.mmu.m_tick();
 			}
+			if (exit_halt) {
+				cpu.is_halt = false;
+				exit_halt = false;
+			}
+			
+			//serial_output();
+			
+			if (cpu.mmu.update_frame) {
+				// Keyboard controls and joypad
+		        SDL_PumpEvents();
+		        int num_keys;
+				const bool* state = SDL_GetKeyboardState(&num_keys);
 
-			bool up = state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_W];
-			bool down = state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_S];
-			bool left = state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_A];
-			bool right = state[SDL_SCANCODE_RIGHT] || state[SDL_SCANCODE_D];
-			bool a = state[SDL_SCANCODE_X] || state[SDL_SCANCODE_K];
-			bool b = state[SDL_SCANCODE_Z] || state[SDL_SCANCODE_J];
-			bool start = state[SDL_SCANCODE_RETURN] || state[SDL_SCANCODE_RETURN2] || state[SDL_SCANCODE_SPACE];
-			bool select = state[SDL_SCANCODE_RSHIFT] || state[SDL_SCANCODE_LSHIFT];
-			cpu.mmu.set_joypad(up, down, left, right, a, b, start, select);
+				SDL_Event event;
+				if (SDL_PollEvent(&event)) {
+					if (event.type == SDL_EVENT_QUIT) {
+						running = 0;
+					}
+				}
 
-			// Render texture
-			SDL_UpdateTexture(
-				texture,
-				nullptr,
-				cpu.mmu.ppu.framebuffer.data(),
-				GAMEBOY_SCREEN_WIDTH * sizeof(uint32_t)
-			);
-			SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	        SDL_RenderPresent(renderer);
-	        cpu.mmu.update_frame = false;
-	        frame++;
-	        //std::cout << (int)cpu.mmu.t_cycle << "\n";
-	    }
+				bool up = state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_W];
+				bool down = state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_S];
+				bool left = state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_A];
+				bool right = state[SDL_SCANCODE_RIGHT] || state[SDL_SCANCODE_D];
+				bool a = state[SDL_SCANCODE_X] || state[SDL_SCANCODE_K];
+				bool b = state[SDL_SCANCODE_Z] || state[SDL_SCANCODE_J];
+				bool start = state[SDL_SCANCODE_RETURN] || state[SDL_SCANCODE_RETURN2] || state[SDL_SCANCODE_SPACE];
+				bool select = state[SDL_SCANCODE_RSHIFT] || state[SDL_SCANCODE_LSHIFT];
+				cpu.mmu.set_joypad(up, down, left, right, a, b, start, select);
+
+				// Render texture
+				SDL_UpdateTexture(
+					texture,
+					nullptr,
+					cpu.mmu.ppu.framebuffer.data(),
+					GAMEBOY_SCREEN_WIDTH * sizeof(uint32_t)
+				);
+				SDL_RenderTexture(renderer, texture, nullptr, nullptr);
+		        SDL_RenderPresent(renderer);
+		        cpu.mmu.update_frame = false;
+		        frame++;
+		        //std::cout << (int)cpu.mmu.t_cycle << "\n";
+		    }
+		    samples_left = cpu.mmu.apu.get_sample_size();
+		}
 	}
 
 	if (cpu.mmu.battery_enabled) {

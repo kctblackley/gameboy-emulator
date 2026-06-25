@@ -55,7 +55,7 @@ void PPU::set_pixel(int x, int y, pixel px, bool blank) {
 	framebuffer[( y * GAMEBOY_SCREEN_WIDTH) + x] = colour;
 }
 	
-inline uint8_t PPU::vram_read(uint16_t address, bool from_cpu) {
+uint8_t PPU::vram_read(uint16_t address, bool from_cpu) {
 	//if (mode == 3 && from_cpu)
 		//return 0xFF;
 	return vram[address - VRAM];
@@ -332,6 +332,7 @@ void PPU::tick(uint16_t t_cycle) {
 	if (val_ly < 144) {
 		if (ppu_cycle == 0) {
 			rendered_window_pixels = false;
+			fetched_oam.clear();
 			if (val_ly == val_wy && !y_condition) {
 				y_condition = true;
 			}
@@ -347,9 +348,7 @@ void PPU::tick(uint16_t t_cycle) {
 		}
 		if (ppu_cycle == 80 && lcdc_bit_1 == 1) {
 			sprite_height = lcdc_bit_2 ? 16 : 8;
-			oam_x_map.clear();
-			int fetched = 0;
-			for (int i = 0; i < 40 && fetched < 10; i++) {
+			for (int i = 0; i < 40 && fetched_oam.size() < 10; i++) {
 				int oam_idx = ppu_cycle / 2;
 				oam_entry obj;
 				obj.y = oam_read(OAM + (4 * i));
@@ -361,19 +360,19 @@ void PPU::tick(uint16_t t_cycle) {
 					if (sprite_height == 16 && val_ly + 16 < obj.y + 8) {
 						obj.top_tile = true;
 					}
-					oam_x_map[obj.x].push_back(obj);
+					fetched_oam.push_back(obj);
 				}
-				fetched++;
 			}
 		}
 		if (ppu_cycle >= 80 && render_x < GAMEBOY_SCREEN_WIDTH + 8) {
 			if (bg_fifo.empty()) {
 				pixel_fetcher();
 			}
-			auto at_x = oam_x_map.find(render_x);
-			if (at_x != oam_x_map.end()) {
-				for (auto& o : at_x->second) {
-					fetch_sprite(o);
+			if (!fetched_oam.empty()) {
+				for (auto o : fetched_oam) {
+					if (o.x == render_x) {
+						fetch_sprite(o);
+					}
 				}
 			}
 			if (!bg_fifo.empty()) {

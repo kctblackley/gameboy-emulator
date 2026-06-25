@@ -454,24 +454,22 @@ APU::APU() {
 	SDL_Init(SDL_INIT_AUDIO);
 
 	audio.freq = SAMPLE_RATE;
-	audio.format = AUDIO_F32SYS;
+	audio.format = SDL_AUDIO_F32;
 	audio.channels = 2;
-	audio.samples = BUFFER_SIZE;
-	audio.callback = nullptr;
 
-	obtained.format = AUDIO_F32SYS;
+	obtained.format = SDL_AUDIO_F32;
 
-	device = SDL_OpenAudioDevice(nullptr, 0, &audio, &obtained, 0);
+	stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audio, NULL, NULL);
 
-	if (device == 0) {
-		std::cout << "Failed to load audio device\n";
+	if (!stream) {
+		std::cout << "Failed to load audio stream\n";
 	}
 
 	for (int i = 0; i < BUFFER_SIZE; i++) {
 		buffer.push_back(0);
 	}
 
-	SDL_PauseAudioDevice(device, 0);
+	SDL_ResumeAudioStreamDevice(stream);
 }
 
 uint8_t APU::io_reg_read(uint16_t address) {
@@ -584,12 +582,12 @@ void APU::io_reg_write(uint16_t address, uint8_t value) {
 }
 
 APU::~APU() {
-	SDL_CloseAudioDevice(device);
+	SDL_DestroyAudioStream(stream);
 	SDL_Quit();
 }
 
 uint32_t APU::get_sample_size() {
-	return SDL_GetQueuedAudioSize(device);
+	return SDL_GetAudioStreamQueued(stream);
 }
 
 void APU::tick(uint16_t t_cycle) {
@@ -655,8 +653,8 @@ void APU::tick(uint16_t t_cycle) {
 	}
 
 
-	if (can_queue && buf_pos >= BUFFER_SIZE) {
+	if (buf_pos >= BUFFER_SIZE) {
 		buf_pos = 0;
-		SDL_QueueAudio(device, buffer.data(), buffer.size() * sizeof(float));
+		SDL_PutAudioStreamData(stream, buffer.data(), buffer.size() * sizeof(float));
 	}
 }

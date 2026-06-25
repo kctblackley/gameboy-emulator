@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -209,7 +209,7 @@ public:
 
 	SDL_AudioSpec audio = {};
 	SDL_AudioSpec obtained = {};
-	SDL_AudioDeviceID device = {};
+	SDL_AudioStream* stream = nullptr;
 
 	uint8_t fs_pos = 0;
 	uint16_t buf_pos = 0;

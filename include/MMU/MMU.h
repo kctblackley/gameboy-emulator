@@ -51,13 +51,22 @@ public:
 	bool allow_save = true;
 	uint16_t rom_bank_number;
 	uint16_t ram_bank_number;
+	uint16_t rtc_reg_number;
 	uint8_t banking_mode;
+
+
+	uint8_t rtc_seconds;
+	uint8_t rtc_minutes;
+	uint8_t rtc_hours;
+	uint8_t rtc_day_l;
+	uint8_t rtc_day_h;
 
 	uint8_t rom_address_bytes;
 	uint8_t ram_address_bytes;
 
 	// End of MBC Registers and Info
 
+	bool rtc_reg_mapped = true;
 	bool finished_boot = false;
 	bool tima_overflow = false;
 	bool serial_interrupt_request = false;

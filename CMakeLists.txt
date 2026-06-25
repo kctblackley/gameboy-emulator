@@ -5,11 +5,7 @@ project(kctboy LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(SDL2 REQUIRED)
-
-if (NOT SDL2_FOUND)
-    message(FATAL_ERROR "SDL2 is required for this emulator's graphics and audio.'")
-endif()
+find_package(SDL3 REQUIRED)
 
 add_executable(kctboy
     src/main.cpp
@@ -34,4 +30,4 @@ target_include_directories(kctboy PRIVATE
     include/PPU
 )
 
-target_link_libraries(kctboy PRIVATE SDL2::SDL2)
+target_link_libraries(kctboy PRIVATE SDL3::SDL3)

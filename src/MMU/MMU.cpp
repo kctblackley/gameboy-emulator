@@ -307,6 +307,67 @@ void MMU::mbc_set(uint16_t address, uint8_t value) {
 			}
 		}
 	}
+
+	// MBC3
+	if (mbc == 3) {
+		if (address <= 0x1FFF) {
+			if (value == 0xA) {
+				ram_enable = true; // also enables r/w to RTC registers
+			} else {
+				ram_enable = false;
+			}
+		}
+		if (address >= 0x2000 && address <= 0x3FFF) {
+			rom_bank_number = value;
+			if (rom_bank_number == 0) {
+				rom_bank_number = 1;
+			}
+		}
+		if (address >= 0x4000 && address <= 0x5FFF) {
+			if ( (value & 0xF) <= 0x07) {
+				rtc_reg_mapped = false;
+				ram_bank_number = value & 0xF;
+			} else {
+				if ( (value & 0xF) <= 0x0C) {
+					rtc_reg_mapped = true;
+					rtc_reg_number = value & 0xF;
+				} else {
+					rtc_reg_mapped = false;
+				}
+			}
+		}
+		if (address >= 0xA000 && address <= 0xBFFF && !dma_transfer) {
+			uint32_t mbc_address = ((ram_bank_number & 0xF) << 13) | (address & 8191);
+			external_ram[mbc_address] = value;
+		}
+	}
+
+	// MBC5
+	if (mbc == 5) {
+		if (address <= 0x1FFF) {
+			if (value == 0xA) {
+				ram_enable = true; // also enables r/w to RTC registers
+			} else {
+				ram_enable = false;
+			}
+		}
+		if (address >= 0x2000 && address <= 0x2FFF) {
+			rom_bank_number = rom_bank_number & (0xFF00);
+			rom_bank_number = rom_bank_number | value;
+		}
+		if (address >= 0x3000 && address <= 0x3FFF) {
+			rom_bank_number = rom_bank_number & (0xFEFF);
+			rom_bank_number = rom_bank_number | ((value & 1) << 8);
+		}
+		if (address >= 0x4000 && address <= 0x5FFF) {
+			ram_bank_number = value & 0xF;
+		}
+		if (address >= 0xA000 && address <= 0xBFFF && !dma_transfer) {
+			uint32_t mbc_address = ((ram_bank_number & 0xF) << 13) | (address & 8191);
+			external_ram[mbc_address] = value;
+		}
+	}
+
 }
 
 void MMU::set(uint16_t address, uint8_t value, bool tick, bool timer_update) {
@@ -458,6 +519,52 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 			if (ram_enable) {
 				uint16_t masked_address = address & 0x1FF;
 				fetched = external_ram[masked_address] & 0xF;
+			} else {
+				fetched = 0xFF;
+			}
+		}
+	}
+
+	// MBC3
+	if (mbc == 3) {
+		if (address <= 0x3FFF) {
+			if (address < 0x0100 && !finished_boot) {
+				fetched = bootrom_gb[address];
+			} else {
+				fetched = cartridge[address];
+			}
+		}
+		if (address >= 0x4000 && address <= 0x7FFF) {
+			uint32_t mbc_address = (rom_bank_number << 14) | (address & 16383);
+			fetched = cartridge[mbc_address];
+		}
+		if (address >= 0xA000 && address <= 0xBFFF) {
+			if (rtc_reg_mapped) {
+
+			} else {
+				uint32_t mbc_address = (ram_bank_number << 13) | (address & 8191);
+				fetched = external_ram[mbc_address];
+			}
+		}
+	}
+
+	// MBC5
+	if (mbc == 5) {
+		if (address <= 0x3FFF) {
+			if (address < 0x0100 && !finished_boot) {
+				fetched = bootrom_gb[address];
+			} else {
+				fetched = cartridge[address];
+			}
+		}
+		if (address >= 0x4000 && address <= 0x7FFF) {
+			uint32_t mbc_address = ((rom_bank_number & 0x1FF) << 14) | (address & 16383);
+			fetched = cartridge[mbc_address];
+		}
+		if (address >= 0xA000 && address <= 0xBFFF) {
+			if (ram_enable) {
+				uint32_t mbc_address = ((ram_bank_number & 0b11) << 13) | (address & 8191);
+				fetched = external_ram[mbc_address];
 			} else {
 				fetched = 0xFF;
 			}

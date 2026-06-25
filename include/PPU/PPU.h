@@ -3,7 +3,6 @@
 #include <array>
 #include <queue>
 #include <deque>
-#include <unordered_map>
 #include "utility.h"
 
 #define BG_PALETTE 0
@@ -29,7 +28,8 @@ public:
 	std::array<uint8_t, VRAM_SIZE> vram = {};
 	std::array<uint8_t, OAM_SIZE> oam = {};
 	std::array<uint8_t, IO_REGISTERS_SIZE> io_registers = {};
-	std::unordered_map<int, std::vector<oam_entry>> oam_x_map;
+
+	std::vector<oam_entry> fetched_oam;
 
 	bool close_window;
 	bool request_vblank = false;
