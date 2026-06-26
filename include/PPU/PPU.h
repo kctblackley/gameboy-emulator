@@ -25,7 +25,7 @@ typedef struct {
 
 class PPU {
 public:
-	std::array<uint8_t, VRAM_SIZE> vram = {};
+	std::array<uint8_t, MAX_VRAM_SIZE> vram = {};
 	std::array<uint8_t, OAM_SIZE> oam = {};
 	std::array<uint8_t, IO_REGISTERS_SIZE> io_registers = {};
 

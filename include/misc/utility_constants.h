@@ -80,6 +80,7 @@
 
 // RAM sizes
 #define VRAM_SIZE             8192
+#define MAX_VRAM_SIZE         16384
 #define EXTERNAL_RAM_SIZE     8192
 #define MAX_EXTERNAL_RAM_SIZE 131072
 #define WRAM_SIZE             8192

@@ -59,7 +59,8 @@ uint8_t PPU::vram_read(uint16_t address, bool from_cpu) {
 	//if (mode == 3 && from_cpu)
 		//return 0xFF;
 	if (hardware_mode == CGB_MODE) {
-
+		uint8_t vbk = io_reg_read(VBK) & 0b1;
+		return vram[address - VRAM + (8192 * vbk)];
 	} else {
 		return vram[address - VRAM];
 	}
@@ -81,7 +82,8 @@ uint8_t PPU::io_reg_read(uint16_t address) {
 void PPU::vram_write(uint16_t address, uint8_t value, bool from_cpu) {
 	//if (mode != 3 || !from_cpu)
 	if (hardware_mode == CGB_MODE) {
-
+		uint8_t vbk = io_reg_read(VBK) & 0b1;
+		vram[address - VRAM + (8192 * vbk)] = value;
 	} else {
 		vram[address - VRAM] = value;
 	}
