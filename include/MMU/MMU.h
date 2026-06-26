@@ -20,7 +20,7 @@ class MMU { // This is also the implementation for MBC0 (no MBC)
 public:
 	std::vector<uint8_t> cartridge;
 	std::array<uint8_t, MAX_EXTERNAL_RAM_SIZE> external_ram = {};
-	std::array<uint8_t, WRAM_SIZE> wram = {};
+	std::array<uint8_t, MAX_WRAM_SIZE> wram = {};
 	std::array<uint8_t, HRAM_SIZE> hram = {};
 	uint8_t IE = 0; // IE register
 	uint16_t t_cycle = 0;
@@ -108,6 +108,7 @@ public:
 	void set(uint16_t address, uint8_t value, bool tick = true, bool timer_update = false);
 	void set_wram(uint16_t address, uint8_t value);
 	uint8_t mbc_fetch(uint16_t address);
+	uint8_t fetch_wram(uint16_t address);
 	uint8_t fetch(uint16_t address, bool tick = true);
 
 	std::array<uint8_t, 256> bootrom_gb = {

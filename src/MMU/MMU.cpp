@@ -379,7 +379,15 @@ void MMU::set_hardware_mode(int mode) {
 
 void MMU::set_wram(uint16_t address, uint8_t value) {
 	if (hardware_mode == CGB_MODE) {
-		return;
+		if (address < WRAM_SWITCHABLE) {
+			wram[address - WRAM] = value;
+		} else {
+			uint8_t svbk = ppu.io_reg_read(SVBK) & 0b111;
+			if (svbk == 0) {
+				svbk = 1;
+			}
+			wram[address - WRAM_SWITCHABLE + (4096 * svbk)] = value;
+		}
 	} else {
 		wram[address - WRAM] = value;
 	}
@@ -590,19 +598,35 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	return fetched;
 }
 
+uint8_t MMU::fetch_wram(uint16_t address) {
+	if (hardware_mode == CGB_MODE) {
+		if (address < WRAM_SWITCHABLE) {
+			return wram[address - WRAM];
+		} else {
+			uint8_t svbk = ppu.io_reg_read(SVBK) & 0b111;
+			if (svbk == 0) {
+				svbk = 1;
+			}
+			return wram[address - WRAM_SWITCHABLE + (4096 * svbk)];
+		}
+	} else {
+		return wram[address - WRAM];
+	}
+}
+
 uint8_t MMU::fetch(uint16_t address, bool tick) {
 	uint8_t fetched = mbc_fetch(address);
 	if (address >= VRAM && address < EXTERNAL_RAM) { // BANKING FOR CGB
 		fetched = ppu.vram_read(address);
 	}
 	if (address >= WRAM && address < WRAM_SWITCHABLE) {
-		fetched = wram[address - WRAM];
+		fetched = fetch_wram(address);
 	}
 	if (address >= WRAM_SWITCHABLE && address < ECHO_RAM) { // BANKING FOR CGB
-		fetched = wram[address - WRAM];
+		fetched = fetch_wram(address);
 	}
 	if (address >= ECHO_RAM && address < OAM) {
-		fetched = wram[address - ECHO_RAM];
+		fetched = fetch_wram(address - ECHO_RAM + WRAM);
 	}
 	if (address >= OAM && address < NOT_USABLE) {
 		if (dma_transfer) {

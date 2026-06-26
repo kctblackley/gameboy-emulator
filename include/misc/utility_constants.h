@@ -83,6 +83,7 @@
 #define EXTERNAL_RAM_SIZE     8192
 #define MAX_EXTERNAL_RAM_SIZE 131072
 #define WRAM_SIZE             8192
+#define MAX_WRAM_SIZE         32768
 #define OAM_SIZE              160
 #define IO_REGISTERS_SIZE     128
 #define HRAM_SIZE             128
