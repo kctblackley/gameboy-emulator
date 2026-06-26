@@ -19,6 +19,7 @@ void CPU::bootrom() {
 
 void CPU::set_hardware_mode(int mode) {
 	hardware_mode = mode;
+	std::cout << "CPU set to mode " << mode << "\n";
 	mmu.set_hardware_mode(mode);
 }
 

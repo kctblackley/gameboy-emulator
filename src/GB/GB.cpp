@@ -86,6 +86,7 @@ void GB::update_if() {
 
 void GB::set_hardware_mode(int mode) {
 	hardware_mode = mode;
+	std::cout << "GB  set to mode " << mode << "\n";
 	cpu.set_hardware_mode(mode);
 }
 

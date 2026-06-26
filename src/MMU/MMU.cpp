@@ -372,6 +372,7 @@ void MMU::mbc_set(uint16_t address, uint8_t value) {
 
 void MMU::set_hardware_mode(int mode) {
 	hardware_mode = mode;
+	std::cout << "MMU set to mode " << mode << "\n";
 	ppu.set_hardware_mode(mode);
 	apu.set_hardware_mode(mode);
 }

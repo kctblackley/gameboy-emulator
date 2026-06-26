@@ -660,5 +660,6 @@ void APU::tick(uint16_t t_cycle) {
 }
 
 void APU::set_hardware_mode(int mode) {
+	std::cout << "APU set to mode " << mode << "\n";
 	hardware_mode = mode;
 }
