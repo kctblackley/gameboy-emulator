@@ -58,7 +58,11 @@ void PPU::set_pixel(int x, int y, pixel px, bool blank) {
 uint8_t PPU::vram_read(uint16_t address, bool from_cpu) {
 	//if (mode == 3 && from_cpu)
 		//return 0xFF;
-	return vram[address - VRAM];
+	if (hardware_mode == CGB_MODE) {
+
+	} else {
+		return vram[address - VRAM];
+	}
 }
 
 uint8_t PPU::oam_read(uint16_t address, bool from_cpu) {
@@ -76,7 +80,11 @@ uint8_t PPU::io_reg_read(uint16_t address) {
 
 void PPU::vram_write(uint16_t address, uint8_t value, bool from_cpu) {
 	//if (mode != 3 || !from_cpu)
+	if (hardware_mode == CGB_MODE) {
+
+	} else {
 		vram[address - VRAM] = value;
+	}
 }
 
 void PPU::oam_write(uint16_t address, uint8_t value, bool from_cpu) {

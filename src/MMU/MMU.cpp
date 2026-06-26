@@ -454,6 +454,22 @@ void MMU::set(uint16_t address, uint8_t value, bool tick, bool timer_update) {
 	prev_sc7 = ((value >> 7) & 0b1);
 }
 
+bool MMU::is_bootrom(uint16_t address) {
+	if (hardware_mode == CGB_MODE) {
+		return ( (address < 0x0100 || (address >= 0x0200 && address < 0x0900)) && !finished_boot);
+	} else {
+		return (address < 0x0100 && !finished_boot);
+	}
+}
+
+uint8_t MMU::get_bootrom(uint16_t address) {
+	if (hardware_mode == CGB_MODE) {
+		return bootrom_gbc[address];
+	} else {
+		return bootrom_gb[address];
+	}
+}
+
 uint8_t MMU::mbc_fetch(uint16_t address) {
 	uint8_t fetched = 0xFF;
 	//std::cout << std::hex << (int)interpret_joypad(jp);
@@ -475,8 +491,8 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	if (mbc == 1) {
 		uint32_t mbc_address = 0;
 		if (address <= 0x3FFF) {
-			if (address < 0x0100 && !finished_boot) {
-				fetched = bootrom_gb[address];
+			if (is_bootrom(address)) {
+				fetched = get_bootrom(address);
 			} else {
 				if (rom_size_kb >= 1024 && banking_mode == 1) {
 					mbc_address = ((ram_bank_number & 3) << 19) | (address & 16383);
@@ -518,8 +534,8 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	// MBC2
 	if (mbc == 2) {
 		if (address <= 0x3FFF) {
-			if (address < 0x0100 && !finished_boot) {
-				fetched = bootrom_gb[address];
+			if (is_bootrom(address)) {
+				fetched = get_bootrom(address);
 			} else {
 				fetched = cartridge[address];
 			}
@@ -552,8 +568,8 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	// MBC3
 	if (mbc == 3) {
 		if (address <= 0x3FFF) {
-			if (address < 0x0100 && !finished_boot) {
-				fetched = bootrom_gb[address];
+			if (is_bootrom(address)) {
+				fetched = get_bootrom(address);
 			} else {
 				fetched = cartridge[address];
 			}
@@ -575,8 +591,8 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	// MBC5
 	if (mbc == 5) {
 		if (address <= 0x3FFF) {
-			if (address < 0x0100 && !finished_boot) {
-				fetched = bootrom_gb[address];
+			if (is_bootrom(address)) {
+				fetched = get_bootrom(address);
 			} else {
 				fetched = cartridge[address];
 			}
