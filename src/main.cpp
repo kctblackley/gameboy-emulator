@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		if (stat(directory.c_str(), &sb) == 0) {
-			gameboy.cpu.mmu.rom_name = game;
+			gameboy.cpu.mmu.rom_name = game + ( (hardware_mode == CGB_MODE) ? "_gbc" : "_gb");
 			gameboy.set_hardware_mode(hardware_mode);
 			gameboy.run_rom(directory, load_save, chosen_save);
 			running = false;

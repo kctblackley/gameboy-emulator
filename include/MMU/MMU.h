@@ -106,6 +106,7 @@ public:
 
 	void mbc_set(uint16_t address, uint8_t value);
 	void set(uint16_t address, uint8_t value, bool tick = true, bool timer_update = false);
+	void set_wram(uint16_t address, uint8_t value);
 	uint8_t mbc_fetch(uint16_t address);
 	uint8_t fetch(uint16_t address, bool tick = true);
 

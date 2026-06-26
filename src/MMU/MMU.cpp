@@ -377,6 +377,14 @@ void MMU::set_hardware_mode(int mode) {
 	apu.set_hardware_mode(mode);
 }
 
+void MMU::set_wram(uint16_t address, uint8_t value) {
+	if (hardware_mode == CGB_MODE) {
+		return;
+	} else {
+		wram[address - WRAM] = value;
+	}
+}
+
 void MMU::set(uint16_t address, uint8_t value, bool tick, bool timer_update) {
 	bool writing_tma = false;
 	if (address == TMA) {
@@ -391,13 +399,14 @@ void MMU::set(uint16_t address, uint8_t value, bool tick, bool timer_update) {
 	}
 	if (MEM_LOG_ENABLED == 1) { std::cout << std::hex << (int)value << " was written to address " << std::hex << (int)address << std::endl; }
 	if (address >= WRAM && address < WRAM_SWITCHABLE && !dma_transfer) {
+		set_wram(address, value);
 		wram[address - WRAM] = value;
 	}
 	if (address >= WRAM_SWITCHABLE && address < ECHO_RAM && !dma_transfer) { // BANKING FOR CGB
-		wram[address - WRAM] = value;
+		set_wram(address, value);
 	}
 	if (address >= ECHO_RAM && address < OAM && !dma_transfer) {
-		wram[address - ECHO_RAM] = value;
+		set_wram(address - ECHO_RAM + WRAM, value);
 	}
 	if (address >= OAM && address < NOT_USABLE) {
 		if (dma_transfer) {
