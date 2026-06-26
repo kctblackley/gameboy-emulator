@@ -83,9 +83,13 @@ public:
 	bool a, b, start, select;
 	uint16_t dma_start = 0;
 
+	int hardware_mode = DMG_MODE;
+
 	MMU(); // No initialisation
 
 	void update_timers(bool writing_tma = false, uint8_t old_tma = 0);
+
+	void set_hardware_mode(int mode);
 
 	void request_interrupt(uint8_t interrupt);
 	void reset_if(uint8_t interrupt);

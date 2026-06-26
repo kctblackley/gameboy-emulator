@@ -658,3 +658,7 @@ void APU::tick(uint16_t t_cycle) {
 		SDL_PutAudioStreamData(stream, buffer.data(), buffer.size() * sizeof(float));
 	}
 }
+
+void APU::set_hardware_mode(int mode) {
+	hardware_mode = mode;
+}

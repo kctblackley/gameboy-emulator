@@ -14,10 +14,17 @@ int main(int argc, char *argv[]) {
 		bool load_save = false;
 		std::string chosen_save = "";
 
+		int hardware_mode = DMG_MODE;
+		std::cout << "Enter hardware mode (0 = Game Boy, 1 = Game Boy Color)\n>> ";
+		std::cin >> hardware_mode;
+		if (hardware_mode != DMG_MODE && hardware_mode != CGB_MODE) {
+			hardware_mode = DMG_MODE;
+		}
+
 		std::cout << "Enter a game name\n>> ";
 		std::cin >> game;
-		std::string directory = "rom/" + game + ".gb";
-		std::string saves = "saves/" + game;
+		std::string directory = "rom/" + game + ".gb" + ( (hardware_mode == CGB_MODE) ? "c" : "");
+		std::string saves = "saves/" + game + ( (hardware_mode == CGB_MODE) ? "_gbc" : "_gb");
 		if (stat(saves.c_str(), &sb) == 0) {
 			std::cout << "Saves for this game exist...\n";
 			int i = 0;
@@ -37,6 +44,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (stat(directory.c_str(), &sb) == 0) {
 			gameboy.cpu.mmu.rom_name = game;
+			gameboy.set_hardware_mode(hardware_mode);
 			gameboy.run_rom(directory, load_save, chosen_save);
 			running = false;
 		} else {

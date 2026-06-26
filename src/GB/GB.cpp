@@ -84,6 +84,11 @@ void GB::update_if() {
 	}
 }
 
+void GB::set_hardware_mode(int mode) {
+	hardware_mode = mode;
+	cpu.set_hardware_mode(mode);
+}
+
 void GB::run_rom(std::string& rom_directory, bool load_save, std::string& username) {
 	
 	cpu.load_rom(rom_directory);

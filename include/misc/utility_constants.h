@@ -14,6 +14,10 @@
 #define HALF_CARRY_FLAG  5
 #define CARRY_FLAG       4
 
+// Hardware modes
+#define DMG_MODE 0
+#define CGB_MODE 1
+
 #define DEFAULT_JOYPAD {false, false, false, false, false, false, false, false}
 
 // in pixels

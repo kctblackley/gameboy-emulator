@@ -17,6 +17,11 @@ void CPU::bootrom() {
 	set_IME = 0;
 }
 
+void CPU::set_hardware_mode(int mode) {
+	hardware_mode = mode;
+	mmu.set_hardware_mode(mode);
+}
+
 void CPU::load_rom(std::string& rom_directory) {
 	bootrom();
 	mmu.load_rom(rom_directory);

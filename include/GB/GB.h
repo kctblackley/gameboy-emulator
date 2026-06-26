@@ -42,8 +42,11 @@ public:
 
 	Opcode opcode = Opcode(); // stores opcode currently being decoded
 
+	int hardware_mode = DMG_MODE;
+
 	GB(); // rom_directory is name of .gb or .gbc rom file
 
+	void set_hardware_mode(int mode);
 	void update_if();
 	void fetch();
 	void log_cpu();

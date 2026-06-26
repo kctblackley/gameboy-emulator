@@ -83,7 +83,10 @@ public:
 	bool h_blank;
 	bool stat_interrupt;
 
+	int hardware_mode = DMG_MODE;
+
 	PPU();
+	void set_hardware_mode(int mode);
 	uint8_t vram_read(uint16_t address, bool from_cpu = true);
 	uint8_t oam_read(uint16_t address, bool from_cpu = true);
 	uint8_t io_reg_read(uint16_t address);

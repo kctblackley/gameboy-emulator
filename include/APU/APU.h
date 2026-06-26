@@ -221,8 +221,11 @@ public:
 
 	std::vector<float> buffer = {};
 
+	int hardware_mode = DMG_MODE;
+
 	APU();
 	~APU();
+	void set_hardware_mode(int mode);
 	uint8_t io_reg_read(uint16_t address);
 	uint32_t get_sample_size();
 	void io_reg_write(uint16_t address, uint8_t value);

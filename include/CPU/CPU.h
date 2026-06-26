@@ -41,7 +41,11 @@ public:
 	bool jump_flag = false;
 	bool is_halt = false;
 
+	int hardware_mode = DMG_MODE;
+
 	CPU(); // Nothing to initialise
+
+	void set_hardware_mode(int mode);
 
 	uint8_t PC1();
 	uint8_t PC2();
