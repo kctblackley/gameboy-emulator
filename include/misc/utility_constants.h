@@ -83,6 +83,7 @@
 #define MAX_VRAM_SIZE         16384
 #define EXTERNAL_RAM_SIZE     8192
 #define MAX_EXTERNAL_RAM_SIZE 131072
+#define PALETTE_RAM_SIZE      64
 #define WRAM_SIZE             8192
 #define MAX_WRAM_SIZE         32768
 #define OAM_SIZE              160
@@ -143,9 +144,7 @@
 #define BCPD  0xFF69
 #define BGPD  0xFF69
 #define OCPS  0xFF6A
-#define OBPI  0xFF6A
 #define OCPD  0xFF6B
-#define OBPD  0xFF6B
 #define OPRI  0xFF6C
 #define SVBK  0xFF70
 #define WBK   0xFF70

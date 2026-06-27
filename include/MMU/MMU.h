@@ -22,6 +22,7 @@ public:
 	std::array<uint8_t, MAX_EXTERNAL_RAM_SIZE> external_ram = {};
 	std::array<uint8_t, MAX_WRAM_SIZE> wram = {};
 	std::array<uint8_t, HRAM_SIZE> hram = {};
+
 	uint8_t IE = 0; // IE register
 	uint16_t t_cycle = 0;
 

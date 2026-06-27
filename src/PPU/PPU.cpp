@@ -25,28 +25,53 @@ void PPU::set_pixel(int x, int y, pixel px, bool blank) {
 	if (y < 0 || y >= GAMEBOY_SCREEN_HEIGHT) {
 		return;
 	}
-	uint8_t palette;
-	if (px.palette == BG_PALETTE) {
-		palette = io_reg_read(BGP);
-	}
-	if (px.palette == OBJ_PALETTE_0) {
-		palette = io_reg_read(OBP0);
-	}
-	if (px.palette == OBJ_PALETTE_1) {
-		palette = io_reg_read(OBP1);
-	}
-	
-	uint8_t colour_lsb = (palette >> (2 * px.colour)) & 0b1;
-	uint8_t colour_msb = (palette >> ((2 * px.colour) + 1)) & 0b1;
-	uint8_t colour_bit = (colour_msb << 1) + colour_lsb;
-
 	uint32_t colour = 0xFFFFFFFF;
-	switch(colour_bit) {
-	case 0:  colour = 0xFFFFFFFF; break;
-	case 1:  colour = 0xA9A9A9FF; break;
-	case 2:  colour = 0x545454FF; break;
-	case 3:  colour = 0x000000FF; break;
-	default: break;
+
+	if (hardware_mode == DMG_MODE) {
+		uint8_t palette;
+		if (px.palette == BG_PALETTE) {
+			palette = io_reg_read(BGP);
+		}
+		if (px.palette == OBJ_PALETTE_0) {
+			palette = io_reg_read(OBP0);
+		}
+		if (px.palette == OBJ_PALETTE_1) {
+			palette = io_reg_read(OBP1);
+		}
+		
+		uint8_t colour_lsb = (palette >> (2 * px.colour)) & 0b1;
+		uint8_t colour_msb = (palette >> ((2 * px.colour) + 1)) & 0b1;
+		uint8_t colour_bit = (colour_msb << 1) + colour_lsb;
+
+		switch(colour_bit) {
+		case 0:  colour = 0xFFFFFFFF; break;
+		case 1:  colour = 0xA9A9A9FF; break;
+		case 2:  colour = 0x545454FF; break;
+		case 3:  colour = 0x000000FF; break;
+		default: break;
+		}
+	} else {
+		uint8_t idx = (px.palette * 8) + (px.colour * 2);
+		uint8_t colour_lsb, colour_msb;
+		if (px.is_object) {
+			colour_lsb = obj_palette_ram[idx];
+			colour_msb = obj_palette_ram[idx + 1];
+		} else {
+			colour_lsb = bg_palette_ram[idx];
+			colour_msb = bg_palette_ram[idx + 1];
+		}
+		uint16_t rgb_555 = (colour_msb << 8) | colour_lsb;
+
+		uint8_t r = rgb_555 & 0x1F;
+		uint8_t g = (rgb_555 >> 5) & 0x1F;
+		uint8_t b = (rgb_555 >> 10) & 0x1F;
+
+		uint8_t R = (r << 3) | (r >> 2);
+		uint8_t G = (g << 3) | (g >> 2);
+		uint8_t B = (b << 3) | (b >> 2);
+
+		colour = (R << 24) | (G << 16) | (B << 8) | 0xFF;
+
 	}
 	if (blank) {
 		colour = 0xFFFFFFFF;
@@ -79,6 +104,14 @@ uint8_t PPU::io_reg_read(uint16_t address) {
 	if (address == STAT) {
 		return (io_registers[address - IO_REGISTERS]) | 0b10000000;
 	}
+	if (hardware_mode == CGB_MODE && address == BCPD) {
+		uint8_t idx = io_reg_read(BCPS) & 0x3F;
+		return bg_palette_ram[idx];
+	}
+	if (hardware_mode == CGB_MODE && address == OCPD) {
+		uint8_t idx = io_reg_read(OCPS) & 0x3F;
+		return obj_palette_ram[idx];
+	}
 	return io_registers[address - IO_REGISTERS];
 }
 
@@ -102,7 +135,23 @@ void PPU::io_reg_write(uint16_t address, uint8_t value) {
 		joypad_bit_4 = (value >> 4) & 0b1;
 		joypad_bit_5 = (value >> 5) & 0b1;
 	}
-	if (address == STAT) {
+	if (hardware_mode == CGB_MODE && address == BCPD) {
+		uint8_t bcps = io_reg_read(BCPS);
+		uint8_t idx = bcps & 0x3F;
+		bg_palette_ram[idx] = value;
+		if ( (bcps & 0x80) == 0x80) {
+			idx = (idx + 1) & 0x3F;
+			io_reg_write(BCPS, (bcps & 0x80) | idx);
+		}
+	} else if (hardware_mode == CGB_MODE && address == OCPD) {
+		uint8_t ocps = io_reg_read(OCPS);
+		uint8_t idx = ocps & 0x3F;
+		obj_palette_ram[idx] = value;
+		if ( (ocps & 0x80) == 0x80) {
+			idx = (idx + 1) & 0x3F;
+			io_reg_write(OCPS, (ocps & 0x80) | idx);
+		}
+	} else if (address == STAT) {
 		stat = io_registers[address - IO_REGISTERS];
 		stat = (value & 0b11111000) | (stat & 0b111);
 		io_registers[address - IO_REGISTERS] = stat;
@@ -231,7 +280,7 @@ void PPU::pixel_fetcher() {
 					for (int i = 0; i < 8 && !(bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift); i++) {
 						uint8_t colour_high = ((tile_high >> i) & 0b1) << 1;
 						uint8_t colour_low = (tile_low >> i) & 0b1;
-						bg_fifo.push({(uint8_t)(colour_high | colour_low), BG_PALETTE, 1});
+						bg_fifo.push({(uint8_t)(colour_high | colour_low), bg_palette, bg_priority_flag, false});
 						val_lx += 1;
 						to_discard--;
 					}
@@ -239,7 +288,7 @@ void PPU::pixel_fetcher() {
 					for (int i = 7; i >= 0 && !(bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift); --i) {
 						uint8_t colour_high = ((tile_high >> i) & 0b1) << 1;
 						uint8_t colour_low = (tile_low >> i) & 0b1;
-						bg_fifo.push({(uint8_t)(colour_high | colour_low), BG_PALETTE, 1});
+						bg_fifo.push({(uint8_t)(colour_high | colour_low), (hardware_mode == CGB_MODE) ? bg_palette : BG_PALETTE, bg_priority_flag, false});
 						val_lx += 1;
 						to_discard--;
 					}
@@ -307,7 +356,12 @@ void PPU::fetch_sprite(oam_entry o) {
 	uint8_t tile_low = vram_read(tile_address, false, bank);
 	uint8_t tile_high = vram_read(tile_address + 1, true, bank);
 
-	uint8_t palette = palette_bit ? OBJ_PALETTE_1 : OBJ_PALETTE_0;
+	uint8_t palette;
+	if (hardware_mode == CGB_MODE) {
+		palette = o.attr & 0x7;
+	} else {
+		palette = palette_bit ? OBJ_PALETTE_1 : OBJ_PALETTE_0;
+	}
 
 	pixel px;
 
@@ -319,7 +373,7 @@ void PPU::fetch_sprite(oam_entry o) {
 	for (int i = 0; i <= 7; i++) {
 		uint8_t colour_high = ((tile_high >> bit) & 0b1) << 1;
 		uint8_t colour_low = (tile_low >> bit) & 0b1;
-		px = {(uint8_t)(colour_high | colour_low), palette, priority_bit};
+		px = {(uint8_t)(colour_high | colour_low), palette, priority_bit, true};
 		if (sprite_fifo[i].colour == 0) {
 			sprite_fifo[i] = px;
 		}
@@ -452,6 +506,14 @@ void PPU::tick(uint16_t t_cycle) {
 					pixel final_px = bg_px;
 					if (sprite_px.colour != 0 && !(sprite_px.priority_bit == 1 && bg_px.colour != 0)) {
 						final_px = sprite_px;
+					}
+					if (hardware_mode == CGB_MODE) {
+						if (bg_px.priority_bit == 1 && bg_px.colour != 0) {
+							final_px = bg_px;
+						}
+						if (lcdc_bit_0 == 0 && sprite_px.colour != 0) {
+							final_px = sprite_px;
+						}
 					}
 					if (render_x >= 8) {
 						set_pixel(render_x - 8, val_ly, final_px, false);

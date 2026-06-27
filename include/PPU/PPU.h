@@ -13,6 +13,7 @@ typedef struct {
 	uint8_t colour; // colour id for that pixel
 	int palette; // source + palette
 	uint8_t priority_bit; // important for pixel mixing 
+	bool is_object = false;
 } pixel;
 
 typedef struct {
@@ -29,6 +30,9 @@ public:
 	std::array<uint8_t, OAM_SIZE> oam = {};
 	std::array<uint8_t, IO_REGISTERS_SIZE> io_registers = {};
 
+	std::array<uint8_t, PALETTE_RAM_SIZE> bg_palette_ram = {};
+	std::array<uint8_t, PALETTE_RAM_SIZE> obj_palette_ram = {};
+
 	std::vector<oam_entry> fetched_oam;
 
 	bool close_window;
@@ -41,7 +45,7 @@ public:
 	std::queue<pixel> bg_fifo;
 	std::deque<pixel> sprite_fifo;
 
-	pixel transparent_pixel = {0, OBJ_PALETTE_0, 1};
+	pixel transparent_pixel = {0, OBJ_PALETTE_0, 1, true};
 
 	int mode = 0;
 	int ppu_cycle = 0;
