@@ -250,8 +250,15 @@ void MMU::t_tick(bool writing_tma, uint8_t old_tma) {
 		cycles_since_serial = 0;
 		serial_interrupt_request = false;
 	}
-	apu.tick(t_cycle);
-	ppu.tick(t_cycle);
+	if (double_speed && hardware_mode == CGB_MODE) {
+		if (t_cycle % 2 == 0) {
+			apu.tick(t_cycle / 2);
+			ppu.tick(t_cycle / 2);
+		}
+	} else {
+		apu.tick(t_cycle);
+		ppu.tick(t_cycle);
+	}
 	if (ppu.request_vblank == true) {
 		update_frame = true;
 		request_interrupt(INTERRUPT_VBLANK);
