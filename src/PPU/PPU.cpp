@@ -157,7 +157,14 @@ void PPU::pixel_fetcher() {
 				tile_id_y = ((window_line_counter & 0xFF) >> 3) & 0x1F;
 				tile_id_address = 0x9800 | (bit_6 << 10) | (tile_id_y << 5) | tile_id_x; 
 			}
-			tile_id = vram_read(tile_id_address, false);
+			tile_id = vram_read(tile_id_address, false, 0);
+			tile_attributes = vram_read(tile_id_address, false, 1);
+			
+			bg_tile_bank = (tile_attributes >> 3) & 0b1;
+			bg_tile_horizontal_flip = ( ( (tile_attributes >> 5) & 0b1)  == 1);
+			bg_tile_vertical_flip = ( ( (tile_attributes >> 6) & 0b1)  == 1);
+			bg_palette = tile_attributes & 0x7;
+			bg_priority_flag = (tile_attributes >> 7) & 0b1;
 
 			pf_cycles = 2;
 			pf_step = 1;
@@ -179,14 +186,25 @@ void PPU::pixel_fetcher() {
 				tile_address = 0x9000 + (16 * (int8_t)(tile_id));
 			}
 			//tile_address = (bit_4 ? 0x8000 : 0x9000) + (16 * (bit_4 ? tile_id : (int8_t)tile_id));
+			uint8_t row_shift;
 			if (bg_pixels) {
-				tile_address = tile_address + (2 * ((val_ly + val_scy) & 7));
-       		} else {
-       			tile_address = tile_address + (2 * (window_line_counter & 7));
+				row_shift = ((val_ly + val_scy) & 7);
+			} else {
+       			row_shift = window_line_counter & 7;
        		}
 
-			tile_low = vram_read(tile_address, false);
-
+       		if (hardware_mode == CGB_MODE && bg_tile_vertical_flip) {
+       			tile_address = tile_address + (2 * (7 - row_shift));
+       		} else {
+       			tile_address = tile_address + (2 * row_shift);
+       		}
+       		
+       		if (hardware_mode == CGB_MODE) {
+       			tile_low = vram_read(tile_address, false, bg_tile_bank);
+       		} else {
+       			tile_low = vram_read(tile_address, false);
+       		}
+			
 			pf_cycles = 2;
 			pf_step = 2;
 
@@ -194,7 +212,12 @@ void PPU::pixel_fetcher() {
 
 		case 2: // Get tile row (high)
 			
-			tile_high = vram_read(tile_address + 1, false);
+			if (hardware_mode == CGB_MODE) {
+       			tile_high = vram_read(tile_address + 1, false, bg_tile_bank);
+       		} else {
+       			tile_high = vram_read(tile_address + 1, false);
+       		}
+
 			pf_cycles = 2;
 			pf_step = 3;
 			break;
@@ -204,12 +227,22 @@ void PPU::pixel_fetcher() {
 			pf_step = 3;
 			if (bg_fifo.empty()) {
 				int to_discard = 8;
-				for (int i = 7; i >= 0 && !(bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift); --i) {
-					uint8_t colour_high = ((tile_high >> i) & 0b1) << 1;
-					uint8_t colour_low = (tile_low >> i) & 0b1;
-					bg_fifo.push({(uint8_t)(colour_high | colour_low), BG_PALETTE, 1});
-					val_lx += 1;
-					to_discard--;
+				if (hardware_mode == CGB_MODE && bg_tile_horizontal_flip) {
+					for (int i = 0; i < 8 && !(bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift); i++) {
+						uint8_t colour_high = ((tile_high >> i) & 0b1) << 1;
+						uint8_t colour_low = (tile_low >> i) & 0b1;
+						bg_fifo.push({(uint8_t)(colour_high | colour_low), BG_PALETTE, 1});
+						val_lx += 1;
+						to_discard--;
+					}
+				} else {
+					for (int i = 7; i >= 0 && !(bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift); --i) {
+						uint8_t colour_high = ((tile_high >> i) & 0b1) << 1;
+						uint8_t colour_low = (tile_low >> i) & 0b1;
+						bg_fifo.push({(uint8_t)(colour_high | colour_low), BG_PALETTE, 1});
+						val_lx += 1;
+						to_discard--;
+					}
 				}
 				if (bit_5 == 1 && bg_pixels && y_condition && val_lx == val_wx + 1 - window_shift) {
 					bg_pixels = false;
@@ -368,21 +401,22 @@ void PPU::tick(uint16_t t_cycle) {
 				bg_fifo.pop();
 			}
 		}
-		if (ppu_cycle == 80 && lcdc_bit_1 == 1) {
-			sprite_height = lcdc_bit_2 ? 16 : 8;
-			for (int i = 0; i < 40 && fetched_oam.size() < 10; i++) {
-				int oam_idx = ppu_cycle / 2;
-				oam_entry obj;
-				obj.y = oam_read(OAM + (4 * i));
-				obj.x = oam_read(OAM + (4 * i) + 1);
-				obj.tile_idx = oam_read(OAM + (4 * i) + 2);
-				obj.attr = oam_read(OAM + (4 * i) + 3);
-				obj.top_tile = false;
-				if (obj.x >= 0 && val_ly + 16 >= obj.y && val_ly + 16 < obj.y + sprite_height) {
-					if (sprite_height == 16 && val_ly + 16 < obj.y + 8) {
-						obj.top_tile = true;
+		if (hardware_mode == DMG_MODE || hardware_mode == CGB_MODE) { // Just to keep working DMG code safe (in case changes need to be made for CGB here)
+			if (ppu_cycle == 80 && lcdc_bit_1 == 1) {
+				for (int i = 0; i < 40 && fetched_oam.size() < 10; i++) {
+					oam_entry obj;
+					sprite_height = lcdc_bit_2 ? 16 : 8;
+					obj.y = oam_read(OAM + (4 * i));
+					obj.x = oam_read(OAM + (4 * i) + 1);
+					obj.tile_idx = oam_read(OAM + (4 * i) + 2);
+					obj.attr = oam_read(OAM + (4 * i) + 3);
+					obj.top_tile = false;
+					if (obj.x >= 0 && val_ly + 16 >= obj.y && val_ly + 16 < obj.y + sprite_height) {
+						if (sprite_height == 16 && val_ly + 16 < obj.y + 8) {
+							obj.top_tile = true;
+						}
+						fetched_oam.push_back(obj);
 					}
-					fetched_oam.push_back(obj);
 				}
 			}
 		}

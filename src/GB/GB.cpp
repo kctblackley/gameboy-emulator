@@ -185,7 +185,7 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	while (running > 0) {
 		uint32_t samples_left = cpu.mmu.apu.get_sample_size();
-		while (samples_left < sizeof(float) * BUFFER_SIZE * 5) {
+		while (samples_left < sizeof(float) * BUFFER_SIZE * (hardware_mode == CGB_MODE ? 10 : 5)) {
 			if (!cpu.is_halt) { log_cpu(); }
 			update_if();
 			interrupt_handler();

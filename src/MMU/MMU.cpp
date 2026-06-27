@@ -65,7 +65,6 @@ void MMU::gpdma(uint8_t value) {
 	uint16_t src = (hdma_1 << 8) | (hdma_2 & 0xF0);
 	uint16_t dest = 0x8000 | ((hdma_3 & 0x1F) << 8) | (hdma_4 & 0xF0);
 	uint16_t transfer_length = ((value & 0x7F) + 1) * 0x10;
-
 	for (int i = 0; i < transfer_length; i++) {
 		set(dest + i, fetch(src + i, false), false);
 	}
@@ -513,8 +512,8 @@ uint8_t MMU::mbc_fetch(uint16_t address) {
 	// MBC0
 	if (mbc == 0) {
 		if (address < VRAM) { // MBC0 so bank 0 and 1 already loaded...
-			if (address < 0x0100 && !finished_boot) {
-				fetched = bootrom_gb[address];
+			if (is_bootrom(address)) {
+				fetched = get_bootrom(address);
 			} else {
 				fetched = cartridge[address];
 			}

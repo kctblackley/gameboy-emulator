@@ -70,12 +70,17 @@ public:
 	uint8_t val_lyc;
 	uint8_t val_scx, val_scy;
 	uint8_t discard;
-	uint8_t tile_id;
+	uint8_t tile_id, tile_attributes;
 	uint16_t tile_number;
 	uint16_t tile_c;
 	uint8_t window_line_counter = 0;
 	uint8_t window_px_counter = 0;
 	uint16_t tile_address;
+
+	uint8_t bg_tile_bank;
+	uint8_t bg_palette;
+	uint8_t bg_priority_flag;
+	bool bg_tile_horizontal_flip, bg_tile_vertical_flip;
 
 	uint8_t tile_low, tile_high;
 	uint8_t lcdc_bit_0, lcdc_bit_1, lcdc_bit_2;
