@@ -189,7 +189,7 @@ void GB::run_rom(std::string& rom_directory, bool load_save, std::string& userna
 			if (!cpu.is_halt) { log_cpu(); }
 			update_if();
 			interrupt_handler();
-			if (!cpu.is_halt) {
+			if (!cpu.is_halt && cpu.mmu.gpdma_exec_pause == 0) {
 				prev_t = cpu.mmu.t_cycle;
 				fetch();
 				execute();

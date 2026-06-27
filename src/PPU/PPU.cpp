@@ -55,11 +55,14 @@ void PPU::set_pixel(int x, int y, pixel px, bool blank) {
 	framebuffer[( y * GAMEBOY_SCREEN_WIDTH) + x] = colour;
 }
 	
-uint8_t PPU::vram_read(uint16_t address, bool from_cpu) {
+uint8_t PPU::vram_read(uint16_t address, bool from_cpu, int override_bank) {
 	//if (mode == 3 && from_cpu)
 		//return 0xFF;
 	if (hardware_mode == CGB_MODE) {
 		uint8_t vbk = io_reg_read(VBK) & 0b1;
+		if (override_bank >= 0) {
+			vbk = override_bank;
+		}
 		return vram[address - VRAM + (8192 * vbk)];
 	} else {
 		return vram[address - VRAM];
@@ -251,6 +254,10 @@ void PPU::fetch_sprite(oam_entry o) {
 		}
 	}
 
+	int bank = (o.attr >> 3) & 0b1;
+	if (hardware_mode == DMG_MODE) {
+		bank = 0;
+	}
 	uint8_t palette_bit = (o.attr >> 4) & 0b1;
 	uint8_t x_flip = (o.attr >> 5) & 0b1;
 	uint8_t priority_bit = (o.attr >> 7) & 0b1;
@@ -264,8 +271,8 @@ void PPU::fetch_sprite(oam_entry o) {
 		tile_address += 2 * (7 - (obj_row % 8));
 	}
 	
-	uint8_t tile_low = vram_read(tile_address, false);
-	uint8_t tile_high = vram_read(tile_address + 1, true);
+	uint8_t tile_low = vram_read(tile_address, false, bank);
+	uint8_t tile_high = vram_read(tile_address + 1, true, bank);
 
 	uint8_t palette = palette_bit ? OBJ_PALETTE_1 : OBJ_PALETTE_0;
 

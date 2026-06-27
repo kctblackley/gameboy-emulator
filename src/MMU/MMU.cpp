@@ -52,6 +52,39 @@ void MMU::create_save(std::string& username) {
 	}
 }
 
+void MMU::hdma(uint8_t value) {
+
+}
+
+void MMU::gpdma(uint8_t value) {
+	uint8_t hdma_1 = fetch(HDMA1, false);
+	uint8_t hdma_2 = fetch(HDMA2, false);
+	uint8_t hdma_3 = fetch(HDMA3, false);
+	uint8_t hdma_4 = fetch(HDMA4, false);
+
+	uint16_t src = (hdma_1 << 8) | (hdma_2 & 0xF0);
+	uint16_t dest = 0x8000 | ((hdma_3 & 0x1F) << 8) | (hdma_4 & 0xF0);
+	uint16_t transfer_length = ((value & 0x7F) + 1) * 0x10;
+
+	for (int i = 0; i < transfer_length; i++) {
+		set(dest + i, fetch(src + i, false), false);
+	}
+
+	uint16_t blocks = (transfer_length + 15) / 16;
+	if (double_speed) {
+		gpdma_exec_pause = blocks * 16;
+	} else {
+		gpdma_exec_pause = blocks * 8;
+	}
+}
+
+void MMU::vram_dma(uint8_t value) {
+	uint8_t mode = (value >> 7) & 0b1;
+	if (mode == 0) {
+		gpdma(value);
+	}
+}
+
 void MMU::load_rom(std::string& rom_directory) {
 	std::ifstream in;
 	in.open(rom_directory, std::ios::binary);
@@ -233,6 +266,7 @@ void MMU::t_tick(bool writing_tma, uint8_t old_tma) {
 }
 
 void MMU::m_tick(bool writing_tma, uint8_t old_tma) {
+	if (gpdma_exec_pause > 0) { gpdma_exec_pause -= 1; }
 	for (int i = 0; i < T_CYCLE_PER_M; i++) {
 		t_tick(writing_tma, old_tma);
 	}
@@ -424,6 +458,9 @@ void MMU::set(uint16_t address, uint8_t value, bool tick, bool timer_update) {
 		}
 	}
 	if (address >= IO_REGISTERS && address < HRAM) {
+		if (address == HDMA5 && hardware_mode == CGB_MODE) {
+			vram_dma(value);
+		}
 		if (address >= 0xFF10 && address < LCD) {
 			apu.io_reg_write(address, value);
 		} else {

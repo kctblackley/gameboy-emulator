@@ -139,7 +139,12 @@ void CPU::execute_0_ops(Opcode& opcode) {
 					opcode.tcyc = 20;
 					opcode.sz = 3;
 					break;
-				case 2: opcode.tcyc = 4; opcode.sz = 2; break;
+				case 2:
+					opcode.tcyc = 4;
+					opcode.sz = 2;
+					mmu.set(KEY1, mmu.fetch(KEY1, false) | 0x80, false);
+					mmu.m_tick();
+					break;
 				case 3: opcode.tcyc = 12; opcode.sz = 2; PC = PC + convert_e8_to_decimal(PC1()); mmu.m_tick(); break;
 				case 4:
 					opcode.tcyc = 8; opcode.sz = 2;

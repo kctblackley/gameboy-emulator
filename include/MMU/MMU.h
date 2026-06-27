@@ -73,6 +73,8 @@ public:
 	bool reset_tima = false;
 	bool update_frame = false;
 	bool dma_transfer = false;
+	bool double_speed = false;
+
 	int dma_delay = 0;
 	int dma_iter = 0;
 
@@ -82,6 +84,8 @@ public:
 	bool up, down, left, right;
 	bool a, b, start, select;
 	uint16_t dma_start = 0;
+
+	uint16_t gpdma_exec_pause = 0;
 
 	int hardware_mode = DMG_MODE;
 
@@ -103,6 +107,10 @@ public:
 	void m_tick(bool writing_tma = false, uint8_t old_tma = 0);
 	void load_rom(std::string& rom_directory);
 	void print_cartridge();
+
+	void gpdma(uint8_t value);
+	void hdma(uint8_t value);
+	void vram_dma(uint8_t value);
 
 	bool is_bootrom(uint16_t address);
 	uint8_t get_bootrom(uint16_t address);
