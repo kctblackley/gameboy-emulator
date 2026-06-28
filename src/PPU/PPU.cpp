@@ -429,9 +429,16 @@ void PPU::tick(uint16_t t_cycle) {
 	val_scy = io_reg_read(SCY);
 	val_lcdc = io_reg_read(LCDC);
 
+	lcdc_bit_7 = (val_lcdc >> 7) & 0b1;
 	lcdc_bit_2 = (val_lcdc >> 2) & 0b1;
 	lcdc_bit_1 = (val_lcdc >> 1) & 0b1;
 	lcdc_bit_0 = val_lcdc & 0b1;
+
+	if (lcdc_bit_7 == 0) {
+		val_ly = 0;
+		io_reg_write(LY, 0);
+		return;
+	}
 
 	val_wx = io_reg_read(WX);
 	val_wy = io_reg_read(WY);

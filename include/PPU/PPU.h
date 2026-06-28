@@ -87,7 +87,7 @@ public:
 	bool bg_tile_horizontal_flip, bg_tile_vertical_flip;
 
 	uint8_t tile_low, tile_high;
-	uint8_t lcdc_bit_0, lcdc_bit_1, lcdc_bit_2;
+	uint8_t lcdc_bit_0, lcdc_bit_1, lcdc_bit_2, lcdc_bit_7;
 
 	bool h_blank;
 	bool stat_interrupt;
